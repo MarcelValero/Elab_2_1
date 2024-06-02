@@ -1,4 +1,5 @@
 import pandas as pd
+import random
 
 
 # create object SP (for service point)
@@ -46,10 +47,10 @@ class Square:
         self.population = population
 
     def __repr__(self):
-        return f"Square(x={self.x}, y={self.y}, sp_dist={self.sp_dist}), population={self.population})"
+        return f"Square(x={self.x}, y={self.y}, sp_dist={self.sp_dist}, population={self.population})"
 
 
-class Initial_solution:
+class InitialSolution:
     """
     Initial solution class
     initializes with:
@@ -60,7 +61,7 @@ class Initial_solution:
         self.service_points = service_points
 
     def __repr__(self):
-        return f"Initial_solution service_points={self.service_points})"
+        return f"InitialSolution(service_points={self.service_points})"
 
     def total_cost(self):
         """
@@ -68,28 +69,70 @@ class Initial_solution:
         :return: cost of the initial solution
         """
         cost = 0
-
-        for SP in self.service_points:
-            cost += 75000 + 0.1 * SP.pickup + 0.5 * SP.total_dist
+        for sp in self.service_points:
+            cost += 75000 + 0.1 * sp.pickup + 0.5 * sp.total_dist
         return cost
 
+    def modify_service_point(self, valid_coordinates):
+        sp = random.choice(self.service_points)
+        new_x, new_y = select_random_coordinate(valid_coordinates)
+        sp.x = new_x
+        sp.y = new_y
 
-# Read the dataset
+    def add_service_point(self, valid_coordinates, new_id):
+        new_x, new_y = select_random_coordinate(valid_coordinates)
+        new_sp = SP(new_id, new_x, new_y, pickup=0, delivery=0, total_dist=0, cost=0)  # Adjust these values as needed
+        self.service_points.append(new_sp)
+
+    def delete_service_point(self):
+        if self.service_points:
+            self.service_points.pop(random.randint(0, len(self.service_points) - 1))
+
+
 def create_service_points(file_path):
     df = pd.read_csv(file_path)
-
     service_points = []
     for index, row in df.iterrows():
-        sp = SP(row['id'], row['x'], row['y'], row['pickup'], row['delivery'], row['cost'])
+        sp = SP(row['id'], row['x'], row['y'], row['pickup'], row['delivery'], row['total_dist'], row['cost'])
         service_points.append(sp)
-
     return service_points
 
 
-# Example usage:
-file_path = 'path/to/your/dataset.csv'  # Replace with the path to your dataset
-service_points = create_service_points(file_path)
+def load_valid_coordinates(file_path):
+    df = pd.read_csv(file_path)
+    valid_coordinates = list(zip(df['x'], df['y']))
+    return valid_coordinates
+
+
+def select_random_coordinate(valid_coordinates):
+    return random.choice(valid_coordinates)
+
+
+# Example usage
+valid_coordinates_path = 'path/to/valid_coordinates.csv'  # Replace with your valid coordinates file path
+valid_coordinates = load_valid_coordinates(valid_coordinates_path)
+
+service_points_path = 'path/to/service_points.csv'  # Replace with your service points file path
+service_points = create_service_points(service_points_path)
+
+initial_solution = InitialSolution(service_points)
 
 # Print the created service points
+print("Initial Service Points:")
 for sp in service_points:
     print(sp)
+
+# Example simulated annealing iteration (simplified)
+initial_solution.modify_service_point(valid_coordinates)
+print("\nAfter Modifying a Service Point:")
+print(initial_solution)
+
+initial_solution.add_service_point(valid_coordinates, new_id=999)
+print("\nAfter Adding a New Service Point:")
+print(initial_solution)
+
+initial_solution.delete_service_point()
+print("\nAfter Deleting a Service Point:")
+print(initial_solution)
+
+print("\nTotal Cost of Initial Solution:", initial_solution.total_cost())
