@@ -35,7 +35,7 @@ class SP:
         return f"SP(id={self.SP_id}, x={self.x}, y={self.y}, pickup={self.pickup}, delivery={self.delivery}, total_dist={self.total_dist} ,cost={self.cost})"
 
 
-class Square:  # this will be used as the available coordinates for new service points to be spawned
+class Square:  # this will be used as the available coordinates for new service points to be spawned #
     """
     Square class
     initializes with:
