@@ -5,7 +5,7 @@ import math
 
 
 # Author:
-#   Marcel Valero Talarn i6315821
+#   Marcel Valero i6315821
 #   Date: 2021-09-30
 
 
