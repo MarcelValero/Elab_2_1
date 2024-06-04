@@ -3,6 +3,7 @@ import pandas as pd
 import random
 import math
 
+
 # Author:
 #   Marcel Valero Talarn i6315821
 #   Date: 2021-09-30
@@ -42,8 +43,8 @@ class Square:  # this will be used as the available coordinates for new service 
     :param x: x coordinate
     :param y: y coordinate
     :param sp_dist: distance from this neighborhood to all the service points
-    :param population: population of this neighborhood
-    # future extra variables #
+    :param pickup: amount of pickups expected from the service point
+    :param delivery: amount of deliveries expected from the service point
     """
 
     def __init__(self, x, y, sp_dist, population):
@@ -53,7 +54,7 @@ class Square:  # this will be used as the available coordinates for new service 
         self.population = population
 
     def __repr__(self):
-        return f"Square(x={self.x}, y={self.y}, sp_dist={self.sp_dist}, population={self.population})"
+        return f"Square(x={self.x}, y={self.y}, sp_dist={self.sp_dist}, pickup={self.pickup}, delivery={self.delivery})"
 
 
 class InitialSolution:
@@ -61,6 +62,7 @@ class InitialSolution:
     Initial solution class
     initializes with:
     :param service_points: list of service points
+    :param distance_df: dataframe with the distance from all the service points to all the squares
 
     Methods:
     - total_cost: Calculate the total cost of the initial solution
@@ -69,8 +71,9 @@ class InitialSolution:
     - delete_service_point: Delete a random service point
     """
 
-    def __init__(self, service_points):
+    def __init__(self, service_points, distance_df):
         self.service_points = service_points
+        self.distance_df = distance_df
 
     def __repr__(self):
         return f"InitialSolution(service_points={self.service_points})"
@@ -85,6 +88,10 @@ class InitialSolution:
         :return: cost of the initial solution
         :rtype: float
         """
+        # distance to all the squares assigned to the sp * sum of expected deliveries for every square
+        for sp in self.service_points:
+            sp.total_dist = sum(self.distance_df[sp.sp_id][square_id] for square_id in sp.assigned_squares)
+
         cost = 0
         for sp in self.service_points:
             cost += 75000 + 0.1 * sp.pickup + 0.5 * sp.total_dist
@@ -104,6 +111,20 @@ class InitialSolution:
         new_x, new_y = select_random_coordinate(valid_coordinates)
         sp.x = new_x
         sp.y = new_y
+
+        # Re-assign the closest squares to all the service points
+        for sp in self.service_points:
+            sp.assigned_squares = []  # Reset assigned squares
+
+        for square_id in range(len(self.distance_df[1])):  # iterate over all the squares
+            min_distance = float('inf')
+            closest_sp = None
+            for sp in self.service_points:
+                if self.distance_df[sp.sp_id][square_id] < min_distance:
+                    min_distance = self.distance_df[sp.sp_id][square_id]
+                    closest_sp = sp
+            closest_sp.assigned_squares.append(square_id)
+
         print(f"Service Point {sp.SP_id} coordinates modified to ({new_x}, {new_y})")
 
     def add_service_point(self, valid_coordinates, new_id):
@@ -121,6 +142,20 @@ class InitialSolution:
         new_x, new_y = select_random_coordinate(valid_coordinates)
         new_sp = SP(new_id, new_x, new_y, pickup=0, delivery=0, total_dist=0, cost=0)  # Adjust these values as needed
         self.service_points.append(new_sp)
+
+        # Re-assign the closest squares to all the service points
+        for sp in self.service_points:
+            sp.assigned_squares = []  # Reset assigned squares
+
+        for square_id in range(len(self.distance_df[1])):  # iterate over all the squares
+            min_distance = float('inf')
+            closest_sp = None
+            for sp in self.service_points:
+                if self.distance_df[sp.sp_id][square_id] < min_distance:
+                    min_distance = self.distance_df[sp.sp_id][square_id]
+                    closest_sp = sp
+            closest_sp.assigned_squares.append(square_id)
+
         print(f"New Service Point added with ID {new_id} at coordinates ({new_x}, {new_y})")
 
     def delete_service_point(self):
@@ -132,6 +167,19 @@ class InitialSolution:
         if self.service_points:
             self.service_points.pop(random.randint(0, len(self.service_points) - 1))
             print("Random Service Point deleted")
+
+           # Re-assign the closest squares to all the service points
+            for sp in self.service_points:
+                sp.assigned_squares = []  # Reset assigned squares
+
+            for square_id in range(len(self.distance_df[1])):  # iterate over all the squares
+                min_distance = float('inf')
+                closest_sp = None
+                for sp in self.service_points:
+                    if self.distance_df[sp.sp_id][square_id] < min_distance:
+                        min_distance = self.distance_df[sp.sp_id][square_id]
+                        closest_sp = sp
+                closest_sp.assigned_squares.append(square_id)
 
 
 def create_service_points(file_path):
@@ -182,6 +230,7 @@ def select_random_coordinate(valid_coordinates):
     """
     return random.choice(valid_coordinates)
 
+
 def simulated_annealing(original_profit, new_profit, temperature):
     """
     Perform the simulated annealing acceptance criterion.
@@ -200,16 +249,19 @@ def simulated_annealing(original_profit, new_profit, temperature):
 
     return probability >= math_random
 
+
 def main():
     # Load data
     sp_path = 'path/to/service_points.csv'  # Replace with the path to your dataset
-    valid_coords_path = 'path/to/valid_coordinates.csv'  # Replace with your valid coordinates file path
+    all_neighborhoods = '/Users/valero/Elab 2/Case 2/Datasets/predictions_milestone2.csv'
+    distance_matrix = '/Users/valero/Elab 2/Case 2/Datasets/distance_indexed.csv'
 
     ServiceP = create_service_points(sp_path)
-    valid_coordinates = load_valid_coordinates(valid_coords_path)
+    valid_coordinates = load_valid_coordinates(all_neighborhoods)
+    distance_df = pd.read_csv(distance_matrix)
 
     # Generate initial solution
-    initial_solution = InitialSolution(ServiceP)
+    initial_solution = InitialSolution(ServiceP, distance_df)
 
     print(f"Initial Profit: {initial_solution.total_cost()}")
     print(f"Number of Service Points: {len(ServiceP)}")
